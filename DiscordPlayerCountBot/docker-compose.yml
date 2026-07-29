@@ -4,24 +4,24 @@ services:
   discordcounter:
     build: .
     environment:
+      # Set these in a .env file locally, or in Coolify's Environment Variables panel.
       # Set every BOT_* list in the same server order. Separate multiple values with ';'.
       ISDOCKER: "true"
-      BOT_NAMES: "Project Zomboid"
-      # Replace with the Project Zomboid server address reachable from this container.
-      BOT_PUBADDRESSES: "203.0.113.10"
-      BOT_PORTS: "16261"
-      BOT_DISCORD_TOKENS: "DiscordTokenHere"
-      BOT_USENAMETAGS: "false"
-      BOT_STATUSES: "0"
-      BOT_PROVIDERTYPES: "0"
-      BOT_UPDATE_TIME: "30"
+      BOT_NAMES: "${BOT_NAMES}"
+      BOT_PUBADDRESSES: "${BOT_PUBADDRESSES}"
+      BOT_PORTS: "${BOT_PORTS}"
+      BOT_DISCORD_TOKENS: "${BOT_DISCORD_TOKENS}"
+      BOT_USENAMETAGS: "${BOT_USENAMETAGS}"
+      BOT_STATUSES: "${BOT_STATUSES}"
+      BOT_PROVIDERTYPES: "${BOT_PROVIDERTYPES}"
+      BOT_UPDATE_TIME: "${BOT_UPDATE_TIME}"
 
-      # Text channel for online/offline alert messages. Leave empty to disable alerts.
-      DISCORD_CHANNEL_ID: ""
+      # Text channel for online/offline alert messages. Leave blank to disable alerts.
+      DISCORD_CHANNEL_ID: "${DISCORD_CHANNEL_ID:-}"
 
       # Required by the Steam provider. Add other Name,Value pairs with ';'.
-      BOT_APPLICATION_VARIABLES: "SteamAPIKey,YourSteamApiKey"
+      BOT_APPLICATION_VARIABLES: "${BOT_APPLICATION_VARIABLES}"
 
       # Optional: renames a channel with the live player count. It requires Manage Channels.
       # This is not the alert channel setting.
-      # BOT_CHANNELIDS: "123456789012345678"
+      BOT_CHANNELIDS: "${BOT_CHANNELIDS:-}"

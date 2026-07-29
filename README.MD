@@ -45,6 +45,8 @@ The release is self-contained for Windows x64. It is not code-signed, so Windows
 
 ## Docker Compose
 
+The committed [docker-compose.yml](DiscordPlayerCountBot/docker-compose.yml) deliberately contains variable references rather than secrets or sample server values. Set the values in a `.env` file beside it for a local deployment, or in your deployment platform's environment-variable screen.
+
 Run Docker Compose from the `DiscordPlayerCountBot` directory:
 
 ```powershell
@@ -52,7 +54,7 @@ docker compose up -d --build
 docker compose logs -f discordcounter
 ```
 
-Set these environment variables in `docker-compose.yml` or your deployment platform's Compose environment editor:
+Set these environment variables:
 
 ```yaml
 environment:
@@ -72,6 +74,16 @@ environment:
 All `BOT_*` server lists use `;` to configure multiple servers, and values at the same position belong to the same server. Replace `203.0.113.10` with the Project Zomboid server address reachable from the container. `BOT_PROVIDERTYPES: "0"` selects the Steam provider used by the Project Zomboid example. `BOT_APPLICATION_VARIABLES` uses `Name,Value` pairs separated by `;`.
 
 To enable live channel renaming, add `BOT_CHANNELIDS` with the target channel ID and grant the bot `Manage Channels`. Do not use it as the alert channel setting.
+
+## Coolify Deployment
+
+1. Create a new **Docker Compose** resource from `https://github.com/ventriquo/PlayerCountDiscordBot.git`.
+2. Select the `latest` branch. Set **Base Directory** to `/DiscordPlayerCountBot` and the Compose file path to `/docker-compose.yml`.
+3. In Coolify's **Environment Variables** panel, add the variables from the Compose example above. Use your own server values; for the Polaris Zomboid server they are `BOT_NAMES=Polaris Zomboid`, `BOT_PUBADDRESSES=103.47.225.60`, `BOT_PORTS=16261`, and `BOT_PROVIDERTYPES=0`.
+4. Mark `BOT_DISCORD_TOKENS` and the Steam API key inside `BOT_APPLICATION_VARIABLES` as secrets. Set `DISCORD_CHANNEL_ID` to the Discord text channel ID that should receive alerts.
+5. Deploy the resource. This is a background bot, so it does not expose a web port and does not need a domain.
+
+Do not add `BOT_CHANNELIDS` unless you want player-count channel renaming and have granted the Discord bot `Manage Channels`. It is not the status-alert setting.
 
 ## Support
 
