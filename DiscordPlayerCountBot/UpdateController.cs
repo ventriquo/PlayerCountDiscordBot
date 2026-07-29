@@ -79,7 +79,7 @@ public class UpdateController : LoggableClass
                     continue;
                 }
 
-                Error($"Please send crash log to https://discord.gg/FPXdPjcX27.", bot.Information.Id.ToString(), ex);
+                Error($"Please send crash log to https://discord.gg/TarcPvb7H7.", bot.Information.Id.ToString(), ex);
             }
         }
     }
