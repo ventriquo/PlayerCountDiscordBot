@@ -1,8 +1,11 @@
 ﻿using DiscordPlayerCountBot.Attributes;
 using DiscordPlayerCountBot.Enums;
+using DiscordPlayerCountBot.Exceptions;
 using DiscordPlayerCountBot.Extensions;
 using DiscordPlayerCountBot.Http;
 using DiscordPlayerCountBot.Providers.Base;
+using DiscordPlayerCountBot.Services;
+using DiscordPlayerCountBot.ViewModels;
 
 namespace DiscordPlayerCountBot.Bot;
 
@@ -14,6 +17,7 @@ public class Bot : LoggableClass
     public readonly Dictionary<DataProvider, IServerInformationProvider> DataProviders = [];
     public readonly Dictionary<string, string> ApplicationTokens = [];
     public string LastKnownStatus = string.Empty;
+    private readonly ServerStatusNotificationService _statusNotificationService;
 
     public Bot(BotInformation info, Dictionary<string, string> applicationTokens, Dictionary<DataProvider, IServerInformationProvider> dataProviders)
     {
@@ -31,6 +35,7 @@ public class Bot : LoggableClass
         DiscordClient.Ready += DiscordClient_Ready;
         DiscordClient.SlashCommandExecuted += DiscordClient_SlashCommandExecuted;
         DataProviders = dataProviders;
+        _statusNotificationService = new(DiscordClient, GetNotificationChannelId(applicationTokens));
     }
 
     private async Task DiscordClient_SlashCommandExecuted(SocketSlashCommand command)
@@ -124,16 +129,42 @@ public class Bot : LoggableClass
         if (!DataProviders.TryGetValue(dataProviderType, out IServerInformationProvider? dataProvider))
             throw new Exception($"Missing Data Provider for Type: {dataProviderType}");
 
-        var serverInformation = await dataProvider.GetServerInformation(Information, ApplicationTokens);
+        BaseViewModel? serverInformation;
+        try
+        {
+            serverInformation = await dataProvider.GetServerInformation(Information, ApplicationTokens);
+        }
+        catch
+        {
+            await _statusNotificationService.RecordFailedPollAsync();
+            throw;
+        }
 
         if (serverInformation == null)
         {
+            await _statusNotificationService.RecordFailedPollAsync();
             return;
         }
+
+        await _statusNotificationService.RecordSuccessfulPollAsync();
 
         LastKnownStatus = serverInformation.ReplaceTagsWithValues(Information.StatusFormat, Information.UseNameAsLabel, Information.Name);
 
         await DiscordClient.SetGameAsync(LastKnownStatus, null, (ActivityType)activityInteger);
         await DiscordClient.SetChannelName(Information.ChannelID, LastKnownStatus);
+    }
+
+    private static ulong? GetNotificationChannelId(Dictionary<string, string> applicationTokens)
+    {
+        if (!applicationTokens.TryGetValue("DISCORD_CHANNEL_ID", out var channelId))
+            channelId = Environment.GetEnvironmentVariable("DISCORD_CHANNEL_ID");
+
+        if (string.IsNullOrWhiteSpace(channelId))
+            return null;
+
+        if (!ulong.TryParse(channelId, out var parsedChannelId))
+            throw new ConfigurationException("DISCORD_CHANNEL_ID must be a valid Discord channel ID.");
+
+        return parsedChannelId;
     }
 }
