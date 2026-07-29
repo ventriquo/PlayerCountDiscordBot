@@ -19,5 +19,6 @@ public class BotConfig
 
         ApplicationTokens.Add("SteamAPIKey", "Here");
         ApplicationTokens.Add("BattleMetricsKey", "Here");
+        ApplicationTokens.Add("DISCORD_CHANNEL_ID", string.Empty);
     }
 }
