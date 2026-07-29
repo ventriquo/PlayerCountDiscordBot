@@ -9,11 +9,11 @@ public class BotApplicationVariableParserTests
     public void AddsDiscordChannelIdFromDedicatedEnvironmentVariable()
     {
         const string channelId = "824409821985636452";
-        var originalChannelId = Environment.GetEnvironmentVariable("DISCORD_CHANNEL_ID");
+        var originalChannelId = System.Environment.GetEnvironmentVariable("DISCORD_CHANNEL_ID");
 
         try
         {
-            Environment.SetEnvironmentVariable("DISCORD_CHANNEL_ID", channelId);
+            System.Environment.SetEnvironmentVariable("DISCORD_CHANNEL_ID", channelId);
 
             var applicationVariables = new BotApplicationVariableParser()
                 .ParseTyped("SteamAPIKey,12345");
@@ -22,7 +22,7 @@ public class BotApplicationVariableParserTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("DISCORD_CHANNEL_ID", originalChannelId);
+            System.Environment.SetEnvironmentVariable("DISCORD_CHANNEL_ID", originalChannelId);
         }
     }
 }
