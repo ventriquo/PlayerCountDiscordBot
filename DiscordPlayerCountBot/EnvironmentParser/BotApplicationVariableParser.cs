@@ -4,25 +4,35 @@ namespace DiscordPlayerCountBot.EnvironmentParser;
 
 public class BotApplicationVariableParser : EnvironmentParserBase<Dictionary<string, string>>
 {
+    private const string DiscordChannelIdKey = "DISCORD_CHANNEL_ID";
+
     public override string GetKey() => "BOT_APPLICATION_VARIABLES";
     public override Dictionary<string, string> ParseTyped(string? environmentVariable)
     {
-        if (string.IsNullOrEmpty(environmentVariable) || string.IsNullOrWhiteSpace(environmentVariable))
-            ArgumentException.ThrowIfNullOrEmpty(nameof(environmentVariable));
+        var applicationVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        if (!environmentVariable!.Contains(';') && !environmentVariable.Contains(','))
-            throw new FormatException("The environment variable doesn't contain ';' and ','.");
+        if (!string.IsNullOrWhiteSpace(environmentVariable))
+        {
+            foreach (var pair in environmentVariable.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var values = pair.Split(',', 2, StringSplitOptions.TrimEntries);
 
-        if (!environmentVariable.Contains("SteamAPIKey", StringComparison.OrdinalIgnoreCase) && !environmentVariable.Contains("BattleMetricsKey", StringComparison.OrdinalIgnoreCase))
-            throw new FormatException("The input must contain either 'SteamAPIKey' or 'BattleMetricsKey'.");
+                if (values.Length != 2 || string.IsNullOrWhiteSpace(values[0]) || string.IsNullOrWhiteSpace(values[1]))
+                    throw new FormatException($"Invalid application variable '{pair}'. Expected 'Name,Value'.");
 
-        if (!environmentVariable.Contains(','))
-            throw new FormatException("The environment variable must contain ','.");
+                applicationVariables[values[0]] = values[1];
+            }
+        }
 
-        return environmentVariable
-            .Split(';', StringSplitOptions.RemoveEmptyEntries)
-            .Select(pair => pair.Split(',', 2))
-            .Where(kv => kv.Length == 2)
-            .ToDictionary(kv => kv[0].Trim(), kv => kv[1].Trim());
+        var discordChannelId = Environment.GetEnvironmentVariable(DiscordChannelIdKey);
+        if (!string.IsNullOrWhiteSpace(discordChannelId))
+        {
+            if (!ulong.TryParse(discordChannelId, out _))
+                throw new FormatException($"{DiscordChannelIdKey} must be a valid Discord channel ID.");
+
+            applicationVariables[DiscordChannelIdKey] = discordChannelId.Trim();
+        }
+
+        return applicationVariables;
     }
 }

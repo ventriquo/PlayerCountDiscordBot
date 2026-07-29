@@ -16,5 +16,6 @@ services:
        #Application Variables
        #These setting apply to the whole application.
        BOT_UPDATE_TIME: "30"
+       DISCORD_CHANNEL_ID: "123456789012345678" #Channel for online/offline server status notifications.
        #Keys and values are seperated by comas and each pair is seperated by a semi-colon.
        BOT_APPLICATION_VARIABLES: "SteamAPIKey,KeyHere;BattleMetricsKey,KeyHere"

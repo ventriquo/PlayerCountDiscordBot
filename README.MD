@@ -1,15 +1,40 @@
-#### Need help? Have suggestions? Join My Discord Server! 
+# Player Count Discord Bot
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/GravityWolfNotAmused/PlayerCountDiscordBot)
+This repository is maintained by [ventriquo](https://github.com/ventriquo). It is a fork of [GravityWolfNotAmused/PlayerCountDiscordBot](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot), with an added Project Zomboid server-status notification feature.
 
-[![Discord Shield](https://discordapp.com/api/guilds/824404335105933382/widget.png?style=shield)](https://discord.gg/meBtwthmmD)
+The bot polls a game server, updates its Discord activity and optional channel name with player counts, and provides a `/players` slash command.
 
-#### [Never Forget to Read The Docs](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot/wiki)!
+## Server Status Notifications
 
-#### Want to Download? [Here is our latest release!](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot/releases/latest)
+Set `DISCORD_CHANNEL_ID` to the ID of the Discord text channel that should receive alerts. The bot must be able to view that channel and send messages in it.
 
-#### Have an Issue?
-Please report any issues to [Issues tab](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot/issues) or my discord.
+For Docker Compose, set the variable in `DiscordPlayerCountBot/docker-compose.yml`:
 
-#### Want to Request Changes?
-Please fork the dev branch of this repository, and make a pull request for the changes you'd like to see to the project.
+```yaml
+environment:
+  DISCORD_CHANNEL_ID: "123456789012345678"
+```
+
+For a standard `Config.json` deployment, add it to `ApplicationTokens`; a process-level `DISCORD_CHANNEL_ID` environment variable is also supported:
+
+```json
+{
+  "ApplicationTokens": {
+    "SteamAPIKey": "your-steam-api-key",
+    "DISCORD_CHANNEL_ID": "123456789012345678"
+  }
+}
+```
+
+The alert flow avoids poll-interval spam:
+
+- The first successful poll establishes the server as online without sending a message.
+- Three consecutive failed polls send `🚨 The Project Zomboid server is currently OFFLINE!` once.
+- The first successful poll after that outage sends `✅ The Project Zomboid server is back ONLINE!` once.
+- Starting the bot while the server is unavailable does not send an offline alert until the server has first been observed online.
+
+## Configuration
+
+The Docker example at `DiscordPlayerCountBot/docker-compose.yml` lists the supported bot and application variables. `BOT_CHANNELIDS` controls optional channel-name updates; `DISCORD_CHANNEL_ID` is specifically for status alert messages and can point to a different text channel.
+
+See the upstream [project wiki](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot/wiki) for player-count provider configuration and deployment details.
