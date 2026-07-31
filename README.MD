@@ -85,6 +85,18 @@ To enable live channel renaming, add `BOT_CHANNELIDS` with the target channel ID
 
 Do not add `BOT_CHANNELIDS` unless you want player-count channel renaming and have granted the Discord bot `Manage Channels`. It is not the status-alert setting.
 
+## Uptime Kuma Monitoring
+
+Docker deployments expose a health endpoint on port `8080` at `/healthz`. It returns `200` only when the bot configuration is loaded, every Discord client is connected, and the player-count update loop has completed recently. It returns `503` while starting, disconnected, or stalled.
+
+To monitor a Coolify deployment from Uptime Kuma:
+
+1. Add a dedicated health domain to the `discordcounter` service in Coolify, for example `https://playercount-health.example.com:8080`.
+2. Point that hostname's DNS record to the Coolify server and redeploy. `HEALTH_PORT` defaults to `8080` in the supplied Compose file.
+3. In Kuma, create an `HTTP(s)` monitor with `https://playercount-health.example.com/healthz`, a `60` second interval, `10` second timeout, and `1` retry. A `200` response is healthy; after one retry, two consecutive failed checks create an incident.
+
+The health endpoint monitors the bot process and Discord connection. It deliberately does not become unhealthy when the Project Zomboid server is offline: the bot's existing three-failed-poll Discord notification covers that separate condition.
+
 ## Support
 
 For crash logs and support, join [Discord](https://discord.gg/TarcPvb7H7).

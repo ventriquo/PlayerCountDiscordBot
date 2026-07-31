@@ -41,9 +41,13 @@ serviceCollection.AddAllImplementationsOf<IServerInformationProvider>(true);
 serviceCollection.AddAllImplementationsOf<IRconServiceInformation>(true);
 
 serviceCollection.AddSingleton<EnvironmentParserResolver>();
+serviceCollection.AddSingleton<BotHealthMonitor>();
 serviceCollection.AddSingleton<UpdateController>();
+serviceCollection.AddSingleton<HealthServer>();
 
 var app = serviceCollection.BuildServiceProvider();
 
 var controller = app.GetRequiredService<UpdateController>();
+var healthServer = app.GetRequiredService<HealthServer>();
+await healthServer.StartAsync();
 await controller.MainAsync();

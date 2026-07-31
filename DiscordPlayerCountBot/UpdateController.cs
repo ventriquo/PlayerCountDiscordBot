@@ -1,5 +1,6 @@
 ﻿using DiscordPlayerCountBot.Configuration.Base;
 using DiscordPlayerCountBot.Enums;
+using DiscordPlayerCountBot.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.WebSockets;
 using System.Security;
@@ -17,9 +18,11 @@ public class UpdateController : LoggableClass
 
     private int Time = 30;
     private Timer? Timer;
+    private readonly BotHealthMonitor _healthMonitor;
 
-    public UpdateController(IServiceProvider services)
+    public UpdateController(IServiceProvider services, BotHealthMonitor healthMonitor)
     {
+        _healthMonitor = healthMonitor;
         AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
 
         HostingEnvironments = services.GetServices<IConfigurable>()
@@ -53,6 +56,7 @@ public class UpdateController : LoggableClass
 
         Bots = config.Item1;
         Time = config.Item2;
+        _healthMonitor.MarkConfigured(Time, DateTimeOffset.UtcNow);
 
         Info($"Created: {Bots.Count} bot(s) that update every {Time} seconds.");
     }
@@ -82,6 +86,16 @@ public class UpdateController : LoggableClass
                 Error($"Please send crash log to https://discord.gg/TarcPvb7H7.", bot.Information.Id.ToString(), ex);
             }
         }
+
+        _healthMonitor.MarkUpdateCompleted(DateTimeOffset.UtcNow);
+    }
+
+    public HealthSnapshot GetHealthSnapshot()
+    {
+        var hasBots = Bots.Count > 0;
+        var isDiscordConnected = hasBots && Bots.Values.All(bot => bot.DiscordClient.ConnectionState == ConnectionState.Connected);
+
+        return _healthMonitor.GetSnapshot(hasBots, isDiscordConnected, DateTimeOffset.UtcNow);
     }
 
     private async void OnTimerExecute(object? source, ElapsedEventArgs e)
