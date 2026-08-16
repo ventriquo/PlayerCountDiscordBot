@@ -18,6 +18,8 @@ public class Bot : LoggableClass
     public readonly Dictionary<string, string> ApplicationTokens = [];
     public string LastKnownStatus = string.Empty;
     private readonly ServerStatusNotificationService _statusNotificationService;
+    private BaseViewModel? _lastServerInformation;
+    private long _lastSuccessfulPollUtcTicks;
 
     public Bot(BotInformation info, Dictionary<string, string> applicationTokens, Dictionary<DataProvider, IServerInformationProvider> dataProviders)
     {
@@ -148,10 +150,38 @@ public class Bot : LoggableClass
 
         await _statusNotificationService.RecordSuccessfulPollAsync();
 
+        Volatile.Write(ref _lastServerInformation, serverInformation);
+        Interlocked.Exchange(ref _lastSuccessfulPollUtcTicks, DateTimeOffset.UtcNow.UtcDateTime.Ticks);
+
         LastKnownStatus = serverInformation.ReplaceTagsWithValues(Information.StatusFormat, Information.UseNameAsLabel, Information.Name);
 
         await DiscordClient.SetGameAsync(LastKnownStatus, null, (ActivityType)activityInteger);
         await DiscordClient.SetChannelName(Information.ChannelID, LastKnownStatus);
+    }
+
+    public ServerSnapshot GetServerSnapshot()
+    {
+        var information = Volatile.Read(ref _lastServerInformation);
+        var lastUpdatedTicks = Interlocked.Read(ref _lastSuccessfulPollUtcTicks);
+        var lastUpdated = lastUpdatedTicks == 0
+            ? (DateTimeOffset?)null
+            : new DateTimeOffset(lastUpdatedTicks, TimeSpan.Zero);
+
+        return new ServerSnapshot(
+            Information.Name,
+            Information.Address,
+            ((DataProvider)Information.ProviderType).ToString(),
+            _statusNotificationService.CurrentStatus.ToString().ToLowerInvariant(),
+            information?.Players,
+            information?.MaxPlayers,
+            information?.QueuedPlayers,
+            lastUpdated,
+            (information as ViewModels.Palworld.PalworldViewModel)?.ServerFps,
+            (information as ViewModels.Palworld.PalworldViewModel)?.ServerFpsAverage,
+            (information as ViewModels.Palworld.PalworldViewModel)?.ServerFrameTime,
+            (information as ViewModels.Palworld.PalworldViewModel)?.Days,
+            (information as ViewModels.Palworld.PalworldViewModel)?.BaseCampCount,
+            (information as ViewModels.Palworld.PalworldViewModel)?.UptimeSeconds);
     }
 
     private static ulong? GetNotificationChannelId(Dictionary<string, string> applicationTokens)

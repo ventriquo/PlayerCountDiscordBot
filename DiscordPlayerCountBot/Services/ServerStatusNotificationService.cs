@@ -6,6 +6,13 @@ public enum ServerStatusChange
     Online
 }
 
+public enum ServerAvailability
+{
+    Unknown,
+    Online,
+    Offline
+}
+
 public sealed class ServerStatusMonitor
 {
     public const int FailedPollThreshold = 3;
@@ -13,6 +20,9 @@ public sealed class ServerStatusMonitor
     private bool _hasObservedOnline;
     private bool _isOffline;
     private int _consecutiveFailedPolls;
+    private int _currentStatus = (int)ServerAvailability.Unknown;
+
+    public ServerAvailability CurrentStatus => (ServerAvailability)Volatile.Read(ref _currentStatus);
 
     public ServerStatusChange? RecordSuccessfulPoll()
     {
@@ -21,6 +31,7 @@ public sealed class ServerStatusMonitor
         if (!_hasObservedOnline)
         {
             _hasObservedOnline = true;
+            Volatile.Write(ref _currentStatus, (int)ServerAvailability.Online);
             return null;
         }
 
@@ -28,6 +39,7 @@ public sealed class ServerStatusMonitor
             return null;
 
         _isOffline = false;
+        Volatile.Write(ref _currentStatus, (int)ServerAvailability.Online);
         return ServerStatusChange.Online;
     }
 
@@ -41,6 +53,7 @@ public sealed class ServerStatusMonitor
             return null;
 
         _isOffline = true;
+        Volatile.Write(ref _currentStatus, (int)ServerAvailability.Offline);
         return ServerStatusChange.Offline;
     }
 }
@@ -57,6 +70,8 @@ public sealed class ServerStatusNotificationService : LoggableClass
         _discordClient = discordClient ?? throw new ArgumentNullException(nameof(discordClient));
         _channelId = channelId;
     }
+
+    public ServerAvailability CurrentStatus => _statusMonitor.CurrentStatus;
 
     public async Task RecordSuccessfulPollAsync()
     {

@@ -98,6 +98,11 @@ public class UpdateController : LoggableClass
         return _healthMonitor.GetSnapshot(hasBots, isDiscordConnected, DateTimeOffset.UtcNow);
     }
 
+    public IReadOnlyList<ServerSnapshot> GetServerSnapshots()
+    {
+        return Bots.Values.Select(bot => bot.GetServerSnapshot()).ToArray();
+    }
+
     private async void OnTimerExecute(object? source, ElapsedEventArgs e)
     {
         await UpdatePlayerCounts();

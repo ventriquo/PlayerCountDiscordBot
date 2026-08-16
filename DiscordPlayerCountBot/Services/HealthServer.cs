@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace DiscordPlayerCountBot.Services;
@@ -21,10 +22,15 @@ public sealed class HealthServer(UpdateController updateController) : LoggableCl
 
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();
+        builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
         builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(port.Value));
 
         var app = builder.Build();
+        app.UseCors();
         app.MapGet("/healthz", GetHealthResponse);
+        app.MapGet("/server-healthz", GetServerHealthResponse);
+        app.MapGet("/api/servers", GetServerSnapshotsResponse);
 
         await app.StartAsync();
         Info($"Health endpoint listening on port {port.Value} at /healthz.");
@@ -38,6 +44,40 @@ public sealed class HealthServer(UpdateController updateController) : LoggableCl
         return health.IsHealthy
             ? Results.Ok(response)
             : Results.Json(response, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    private IResult GetServerHealthResponse()
+    {
+        var servers = updateController.GetServerSnapshots();
+        var status = GetAggregateServerStatus(servers);
+        var response = new { status, servers = servers.Select(server => server.ToPublicSnapshot()).ToArray() };
+
+        return status == "online"
+            ? Results.Ok(response)
+            : Results.Json(response, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    private IResult GetServerSnapshotsResponse()
+    {
+        return Results.Ok(new
+        {
+            servers = updateController.GetServerSnapshots()
+                .Select(server => server.ToPublicSnapshot())
+                .ToArray()
+        });
+    }
+
+    private static string GetAggregateServerStatus(IReadOnlyList<ServerSnapshot> servers)
+    {
+        if (servers.Count == 0)
+            return "unknown";
+
+        if (servers.Any(server => server.Status == "offline"))
+            return "offline";
+
+        return servers.Any(server => server.Status == "unknown")
+            ? "unknown"
+            : "online";
     }
 
     private int? GetHealthPort()

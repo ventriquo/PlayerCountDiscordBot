@@ -3,6 +3,22 @@ namespace DiscordPlayerCountBot.Tests;
 public class ServerStatusMonitorTests
 {
     [Fact]
+    public void StartsUnknownThenTracksOnlineAndOffline()
+    {
+        var monitor = new DiscordPlayerCountBot.Services.ServerStatusMonitor();
+
+        Assert.Equal(DiscordPlayerCountBot.Services.ServerAvailability.Unknown, monitor.CurrentStatus);
+
+        monitor.RecordSuccessfulPoll();
+        Assert.Equal(DiscordPlayerCountBot.Services.ServerAvailability.Online, monitor.CurrentStatus);
+
+        monitor.RecordFailedPoll();
+        monitor.RecordFailedPoll();
+        monitor.RecordFailedPoll();
+        Assert.Equal(DiscordPlayerCountBot.Services.ServerAvailability.Offline, monitor.CurrentStatus);
+    }
+
+    [Fact]
     public void DoesNotReportOfflineUntilThreeConsecutivePollsFail()
     {
         var monitor = new DiscordPlayerCountBot.Services.ServerStatusMonitor();

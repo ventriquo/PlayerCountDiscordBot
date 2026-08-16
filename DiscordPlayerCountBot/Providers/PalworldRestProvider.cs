@@ -4,6 +4,7 @@ using DiscordPlayerCountBot.Enums;
 using DiscordPlayerCountBot.Providers.Base;
 using DiscordPlayerCountBot.Services;
 using DiscordPlayerCountBot.ViewModels;
+using DiscordPlayerCountBot.ViewModels.Palworld;
 
 namespace DiscordPlayerCountBot.Providers;
 
@@ -31,13 +32,19 @@ public sealed class PalworldRestProvider(IPalworldRestService service) : ServerI
 
             HandleLastException(information);
 
-            return new BaseViewModel
+            return new PalworldViewModel
             {
                 Address = addressAndPort.Item1,
                 Port = addressAndPort.Item2,
                 Players = metrics.CurrentPlayerCount,
                 MaxPlayers = metrics.MaxPlayerCount,
-                QueuedPlayers = 0
+                QueuedPlayers = 0,
+                ServerFps = metrics.ServerFps,
+                ServerFpsAverage = metrics.ServerFpsAverage,
+                ServerFrameTime = metrics.ServerFrameTime,
+                Days = metrics.Days,
+                BaseCampCount = metrics.BaseCampCount,
+                UptimeSeconds = metrics.UptimeSeconds
             };
         }
         catch (Exception exception)

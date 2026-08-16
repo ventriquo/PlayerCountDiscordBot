@@ -112,15 +112,47 @@ Do not add `BOT_CHANNELIDS` unless you want player-count channel renaming and ha
 
 ## Uptime Kuma Monitoring
 
-Docker deployments expose a health endpoint on port `8080` at `/healthz`. It returns `200` only when the bot configuration is loaded, every Discord client is connected, and the player-count update loop has completed recently. It returns `503` while starting, disconnected, or stalled.
+Docker deployments expose HTTP endpoints on the port configured by `HEALTH_PORT` (default `8080`):
+
+- `/healthz` checks the bot process, Discord connection, and update loop. It does not reflect the game server's state.
+- `/server-healthz` checks the game server state. It returns `200` when every configured server is online and `503` when a server is offline or has not completed its first successful poll. It uses the existing three-consecutive-failed-polls rule before reporting a server as offline.
+- `/api/servers` returns the most recent in-memory player count and sanitized telemetry for each configured server. It is read-only, makes no new game-server request, and allows browser requests from another origin. Internal addresses, credentials, and Palworld player identities are not included.
+
+For example, `/api/servers` returns:
+
+```json
+{
+  "servers": [
+    {
+      "name": "Project Zomboid",
+      "provider": "PALWORLDREST",
+      "status": "online",
+      "players": 12,
+      "maxPlayers": 32,
+      "queuedPlayers": 0,
+      "metrics": {
+        "serverFps": 59,
+        "serverFpsAverage": 59.4,
+        "serverFrameTime": 16.83,
+        "days": 13,
+        "baseCampCount": 2,
+        "uptimeSeconds": 1200
+      },
+      "lastUpdatedUtc": "2026-07-31T10:24:00+00:00"
+    }
+  ]
+}
+```
+
+For a Coolify deployment, the service domain must target the same internal port as `HEALTH_PORT`. For example, if the Palworld bot logs `Health endpoint listening on port 8081`, set the Coolify domain's container port to `8081` (or change `HEALTH_PORT` to `8080` and redeploy). A domain pointed at a different service port will return `404` or a proxy error even though the bot process is running.
 
 To monitor a Coolify deployment from Uptime Kuma:
 
-1. Add a dedicated health domain to the `discordcounter` service in Coolify, for example `https://playercount-health.example.com:8080`.
-2. Point that hostname's DNS record to the Coolify server and redeploy. `HEALTH_PORT` defaults to `8080` in the supplied Compose file.
-3. In Kuma, create an `HTTP(s)` monitor with `https://playercount-health.example.com/healthz`, a `60` second interval, `10` second timeout, and `1` retry. A `200` response is healthy; after one retry, two consecutive failed checks create an incident.
+1. Add a dedicated health domain to the `discordcounter` service in Coolify, for example `https://playercount-health.example.com:8080` when `HEALTH_PORT=8080`. If `HEALTH_PORT=8081`, use `https://playercount-health.example.com:8081` in Coolify's domain field.
+2. Point that hostname's DNS record to the Coolify server and redeploy. Confirm `GET /healthz` returns JSON before adding Kuma.
+3. In Kuma, create an `HTTP(s)` monitor with `https://playercount-health.example.com/server-healthz`, a `60` second interval, `10` second timeout, and `1` retry. A `200` response is healthy; after one retry, two consecutive failed checks create an incident.
 
-The health endpoint monitors the bot process and Discord connection. It deliberately does not become unhealthy when the Project Zomboid server is offline: the bot's existing three-failed-poll Discord notification covers that separate condition.
+Kuma stores the game-server uptime history and availability percentage. The bot stores only the latest player-count poll result in memory, so those values reset until the first successful poll after a bot restart.
 
 ## Support
 
