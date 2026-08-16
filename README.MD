@@ -1,6 +1,6 @@
 # Player Count Discord Bot
 
-This repository is maintained by [ventriquo](https://github.com/ventriquo). It is a fork of [GravityWolfNotAmused/PlayerCountDiscordBot](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot) with Project Zomboid status notifications and Docker Compose deployment guidance.
+This repository is maintained by [ventriquo](https://github.com/ventriquo). It is a fork of [GravityWolfNotAmused/PlayerCountDiscordBot](https://github.com/GravityWolfNotAmused/PlayerCountDiscordBot) with Project Zomboid status notifications, native Palworld REST API support, and Docker Compose deployment guidance.
 
 The bot polls a game server, updates its Discord activity with player counts, and provides a `/players` slash command.
 
@@ -72,6 +72,31 @@ environment:
 ```
 
 All `BOT_*` server lists use `;` to configure multiple servers, and values at the same position belong to the same server. Replace `203.0.113.10` with the Project Zomboid server address reachable from the container. `BOT_PROVIDERTYPES: "0"` selects the Steam provider used by the Project Zomboid example. `BOT_APPLICATION_VARIABLES` uses `Name,Value` pairs separated by `;`.
+
+## Palworld REST API Support
+
+This fork supports Palworld's native REST API as a dedicated player-count provider. It does not use the legacy A2S query protocol or fragile RCON text parsing. The provider calls Palworld's authenticated `GET /v1/api/metrics` endpoint and maps `currentplayernum` and `maxplayernum` into the bot's normal player-count display and status-alert flow.
+
+Enable the API in `PalWorldSettings.ini`:
+
+```ini
+RESTAPIEnabled=True
+RESTAPIPort=8212
+```
+
+Restart the Palworld server after changing these settings. The API uses Basic Auth with username `admin` and the server's `AdminPassword`. Keep port `8212` private and allow access only from the bot host or its private network.
+
+For a Palworld server in Docker Compose or Coolify, use:
+
+```text
+BOT_NAMES=Palworld
+BOT_PUBADDRESSES=<palworld-server-ip>
+BOT_PORTS=8212
+BOT_PROVIDERTYPES=7
+BOT_APPLICATION_VARIABLES=PalworldAdminPassword,<palworld-admin-password>
+```
+
+`BOT_PROVIDERTYPES=7` selects the Palworld REST provider. `BOT_PORTS` is the REST API port, not Palworld's game port (`8211`) or RCON port (`25575`). The password is kept in `BOT_APPLICATION_VARIABLES`; mark it as a secret in Coolify. For the Windows `Config.json` deployment, use `ProviderType: 7`, set the server `Address` to `<palworld-server-ip>:8212`, and add `PalworldAdminPassword` to `ApplicationTokens`.
 
 To enable live channel renaming, add `BOT_CHANNELIDS` with the target channel ID and grant the bot `Manage Channels`. Do not use it as the alert channel setting.
 

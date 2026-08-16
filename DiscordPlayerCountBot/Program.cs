@@ -36,6 +36,7 @@ serviceCollection.AddTransient<BattleMetricsService>();
 serviceCollection.AddTransient<CFXService>();
 serviceCollection.AddTransient<MinecraftService>();
 serviceCollection.AddTransient<RconService>();
+serviceCollection.AddTransient<IPalworldRestService, PalworldRestService>();
 
 serviceCollection.AddAllImplementationsOf<IServerInformationProvider>(true);
 serviceCollection.AddAllImplementationsOf<IRconServiceInformation>(true);
